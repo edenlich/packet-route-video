@@ -3,7 +3,7 @@ import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { Camera, Shot, easedMove } from "../components/Camera";
 import { Person } from "../components/Person";
 import { LimbPath, Shape, circ, rr } from "../components/Shape";
-import { COLORS } from "../theme";
+import { COLORS, FONT, OUTLINE } from "../theme";
 
 // Scene 1 — The room. A person at a desk in the evening, seen from behind.
 
@@ -210,6 +210,194 @@ export const BackView: React.FC = () => (
   </g>
 );
 
+// ---------- 3/4 side view set ----------
+// Over-the-shoulder: the person in profile facing right, the laptop screen
+// turned toward the camera (a cartoon cheat) so the address bar is readable.
+
+// Screen is drawn in its own flat 360×240 space, then mapped onto the
+// tilted lid with an affine matrix (a slanted parallelogram reads as 3/4).
+const SCREEN_W = 360;
+const SCREEN_H = 240;
+const SCREEN_TL: [number, number] = [1290, 385];
+const SCREEN_U: [number, number] = [1, 0.028]; // per screen unit, along the width
+const SCREEN_V: [number, number] = [-0.05, 1]; // per screen unit, down the height
+const BEZEL = 16;
+
+const screenToScene = (u: number, v: number): [number, number] => [
+  SCREEN_TL[0] + u * SCREEN_U[0] + v * SCREEN_V[0],
+  SCREEN_TL[1] + u * SCREEN_U[1] + v * SCREEN_V[1],
+];
+const SCREEN_MATRIX = `matrix(${SCREEN_U[0]} ${SCREEN_U[1]} ${SCREEN_V[0]} ${SCREEN_V[1]} ${SCREEN_TL[0]} ${SCREEN_TL[1]})`;
+
+// Keyboard base: lies on the desk, from the hinge toward the person.
+// Local space: u along the hinge (0..BASE_W), w toward the front (0..100).
+const HINGE = screenToScene(-BEZEL, SCREEN_H + BEZEL);
+const BASE_W = SCREEN_W + BEZEL * 2;
+const BASE_FRONT: [number, number] = [-2.1, 0.62]; // per w unit
+const BASE_MATRIX = `matrix(${SCREEN_U[0]} ${SCREEN_U[1]} ${BASE_FRONT[0]} ${BASE_FRONT[1]} ${HINGE[0]} ${HINGE[1]})`;
+const baseToScene = (u: number, w: number): [number, number] => [
+  HINGE[0] + u * SCREEN_U[0] + w * BASE_FRONT[0],
+  HINGE[1] + u * SCREEN_U[1] + w * BASE_FRONT[1],
+];
+
+const ENTER_KEY = { u: 30, w: 38, width: 54, height: 26 };
+export const ENTER_POS = baseToScene(ENTER_KEY.u + ENTER_KEY.width / 2, ENTER_KEY.w + ENTER_KEY.height / 2);
+
+// Where the side-view person sits (floor point under the chair).
+const SIDE_PERSON: [number, number] = [ENTER_POS[0] - 235, 1040];
+const toPersonLocal = (p: [number, number]): [number, number] => [
+  p[0] - SIDE_PERSON[0],
+  p[1] - SIDE_PERSON[1],
+];
+
+const Browser: React.FC<{ typed: string; caret: boolean }> = ({ typed, caret }) => (
+  <g>
+    <clipPath id="s1-browser">
+      <rect x={0} y={0} width={SCREEN_W} height={SCREEN_H} rx={6} />
+    </clipPath>
+    <g clipPath="url(#s1-browser)">
+      <rect x={0} y={0} width={SCREEN_W} height={SCREEN_H} fill={COLORS.white} />
+      {/* Toolbar. */}
+      <rect x={0} y={0} width={SCREEN_W} height={46} fill="#EDE6DA" />
+      <line x1={0} y1={46} x2={SCREEN_W} y2={46} stroke={COLORS.ink} strokeWidth={2} />
+      {[COLORS.packet, COLORS.lampLight, COLORS.network].map((c, i) => (
+        <circle key={c} cx={16 + i * 15} cy={23} r={5} fill={c} stroke={COLORS.ink} strokeWidth={1.5} />
+      ))}
+      {/* Address bar. */}
+      <rect x={66} y={10} width={282} height={26} rx={13} fill={COLORS.white} stroke={COLORS.ink} strokeWidth={2} />
+      <circle cx={81} cy={22} r={5} fill="none" stroke={COLORS.metalShade} strokeWidth={2} />
+      <line x1={85} y1={26} x2={89} y2={30} stroke={COLORS.metalShade} strokeWidth={2} strokeLinecap="round" />
+      <text x={97} y={29} fontFamily={FONT} fontWeight={500} fontSize={17} fill={COLORS.ink}>
+        {typed}
+        <tspan fill={COLORS.network} fontWeight={600} opacity={caret ? 1 : 0}>
+          |
+        </tspan>
+      </text>
+      {/* Empty new-tab page: a few soft placeholder blocks. */}
+      <rect x={110} y={84} width={140} height={22} rx={11} fill={COLORS.wall} />
+      <rect x={60} y={124} width={240} height={30} rx={15} fill={COLORS.background} stroke={COLORS.wallShade} strokeWidth={2} />
+      {[0, 1, 2, 3].map((i) => (
+        <rect key={i} x={74 + i * 56} y={176} width={42} height={42} rx={10} fill={COLORS.wall} />
+      ))}
+    </g>
+  </g>
+);
+
+const LaptopSide: React.FC<{ typed: string; caret: boolean; enterDown: number }> = ({
+  typed,
+  caret,
+  enterDown,
+}) => {
+  const keys: React.ReactNode[] = [];
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 11; col++) {
+      const u = 96 + col * 26;
+      const w = 14 + row * 18;
+      keys.push(<rect key={`${row}-${col}`} x={u} y={w} width={20} height={13} rx={3} fill={COLORS.metal} />);
+    }
+  }
+  // Enter key squashes down when pressed (enterDown 0..1).
+  const squash = 1 - 0.35 * enterDown;
+  return (
+    <g>
+      {/* Keyboard base. */}
+      <g transform={BASE_MATRIX}>
+        {/* Thickness: the front lip, shifted down a little. */}
+        <path
+          d={`M 0 100 L ${BASE_W} 100 L ${BASE_W} 106 L 0 106 Z`}
+          fill={COLORS.metalShade}
+          stroke={COLORS.ink}
+          strokeWidth={3}
+          vectorEffect="non-scaling-stroke"
+        />
+        <rect x={0} y={0} width={BASE_W} height={100} rx={4} fill={COLORS.metal} stroke={COLORS.ink} strokeWidth={OUTLINE} vectorEffect="non-scaling-stroke" />
+        <rect x={20} y={8} width={BASE_W - 40} height={80} rx={4} fill={COLORS.metalShade} />
+        {keys}
+        <g transform={`translate(${ENTER_KEY.u + ENTER_KEY.width / 2} ${ENTER_KEY.w + ENTER_KEY.height}) scale(${1 + 0.12 * enterDown} ${squash}) translate(${-ENTER_KEY.width / 2} ${-ENTER_KEY.height})`}>
+          <rect
+            x={0}
+            y={0}
+            width={ENTER_KEY.width}
+            height={ENTER_KEY.height}
+            rx={4}
+            fill={COLORS.background}
+            stroke={COLORS.ink}
+            strokeWidth={2}
+            vectorEffect="non-scaling-stroke"
+          />
+        </g>
+      </g>
+      {/* Lid: thickness strip on the right edge, bezel, then the screen. */}
+      <g transform={SCREEN_MATRIX}>
+        <rect
+          x={-BEZEL + 8}
+          y={-BEZEL + 6}
+          width={SCREEN_W + BEZEL * 2}
+          height={SCREEN_H + BEZEL * 2}
+          rx={14}
+          fill={COLORS.metalShade}
+          stroke={COLORS.ink}
+          strokeWidth={OUTLINE}
+        />
+        <rect
+          x={-BEZEL}
+          y={-BEZEL}
+          width={SCREEN_W + BEZEL * 2}
+          height={SCREEN_H + BEZEL * 2}
+          rx={14}
+          fill={COLORS.chair}
+          stroke={COLORS.ink}
+          strokeWidth={OUTLINE}
+        />
+        <Browser typed={typed} caret={caret} />
+        <rect x={0} y={0} width={SCREEN_W} height={SCREEN_H} rx={6} fill="none" stroke={COLORS.ink} strokeWidth={3} />
+      </g>
+    </g>
+  );
+};
+
+const DeskSide: React.FC = () => (
+  <g>
+    <Shape
+      d={rr(930, DESK_TOP + 30, 40, FLOOR_Y + 20 - DESK_TOP - 30, 6)}
+      fill={COLORS.wood}
+      shade={<rect x={950} y={DESK_TOP} width={30} height={400} fill={COLORS.woodShade} />}
+    />
+    <Shape
+      d={rr(1900, DESK_TOP + 30, 220, 160, 8)}
+      fill={COLORS.wood}
+      shade={<rect x={1900} y={DESK_TOP + 150} width={220} height={60} fill={COLORS.woodShade} />}
+    />
+    <Shape
+      d={rr(880, DESK_TOP, 1500, 40, 10)}
+      fill={COLORS.wood}
+      shade={<rect x={880} y={DESK_TOP + 24} width={1500} height={20} fill={COLORS.woodShade} />}
+    />
+  </g>
+);
+
+type SideProps = { typed: string; caret: boolean; enterDown: number };
+
+export const SideView: React.FC<SideProps> = ({ typed, caret, enterDown }) => {
+  // Hands: near hand hovers over Enter and dips with the press;
+  // far hand rests further along the keyboard.
+  const press = enterDown * 10;
+  const nearHand = toPersonLocal([ENTER_POS[0] - 4, ENTER_POS[1] - 14 + press]);
+  const farHand = toPersonLocal(baseToScene(150, 30));
+  const screenCenter = screenToScene(SCREEN_W / 2, SCREEN_H / 2);
+  return (
+    <g>
+      <Room />
+      <EveningWash />
+      <ScreenGlow cx={screenCenter[0]} cy={screenCenter[1]} strength={1.2} />
+      <DeskSide />
+      <Lamp x={1760} />
+      <LaptopSide typed={typed} caret={caret} enterDown={enterDown} />
+      <Person x={SIDE_PERSON[0]} y={SIDE_PERSON[1]} view="side" nearHand={nearHand} farHand={farHand} />
+    </g>
+  );
+};
+
 // ---------- Camera plan ----------
 
 // Back view: slow push-in from the wide room toward the person + laptop.
@@ -220,13 +408,27 @@ const BACK_CLOSE: Shot = { x: 925, y: 545, zoom: 1.4, rotate: -0.6 };
 const backShot = (frame: number) =>
   easedMove({ frame, from: BACK_WIDE, to: BACK_CLOSE, start: 0, end: 150 });
 
+// Side view: its own slow push-in toward the screen and the hand on Enter.
+const SIDE_WIDE: Shot = { x: 1180, y: 560, zoom: 1.15, rotate: 0.8 };
+const SIDE_CLOSE: Shot = { x: 1260, y: 560, zoom: 1.7, rotate: 0 };
+const sideShot = (frame: number) =>
+  easedMove({ frame, from: SIDE_WIDE, to: SIDE_CLOSE, start: 110, end: 320 });
+
+const SWITCH = 120;
+
 export const S1Room: React.FC = () => {
   const frame = useCurrentFrame();
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.background }}>
-      <Camera {...backShot(frame)}>
-        <BackView />
-      </Camera>
+      {frame < SWITCH ? (
+        <Camera {...backShot(frame)}>
+          <BackView />
+        </Camera>
+      ) : (
+        <Camera {...sideShot(frame)}>
+          <SideView typed="" caret={Math.floor(frame / 15) % 2 === 0} enterDown={0} />
+        </Camera>
+      )}
     </AbsoluteFill>
   );
 };
