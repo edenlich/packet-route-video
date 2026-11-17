@@ -250,7 +250,93 @@ const toPersonLocal = (p: [number, number]): [number, number] => [
   p[1] - SIDE_PERSON[1],
 ];
 
-const Browser: React.FC<{ typed: string; caret: boolean }> = ({ typed, caret }) => (
+// ---------- Typing timeline (side view) ----------
+// "moodle.com" types itself with a slightly uneven, human rhythm,
+// then a short pause, a wind-up, and Enter.
+const URL_TEXT = "moodle.com";
+const TYPE_START = 160;
+const KEY_GAPS = [8, 7, 10, 6, 9, 8, 13, 7, 8, 9]; // frames before each letter
+const KEY_TIMES = KEY_GAPS.reduce<number[]>((acc, gap, i) => {
+  acc.push((i === 0 ? TYPE_START : acc[i - 1]) + gap);
+  return acc;
+}, []);
+const TYPE_END = KEY_TIMES[KEY_TIMES.length - 1];
+const ENTER_WINDUP = TYPE_END + 14; // hand lifts
+const ENTER_HIT = ENTER_WINDUP + 8; // key hits bottom
+const ENTER_RELEASE = ENTER_HIT + 8;
+
+type Typing = {
+  typed: string;
+  caret: boolean;
+  enterDown: number; // 0..1 key squash
+  flash: number; // 0..1 click flash, fades out
+  loading: number; // 0..1 page-load bar after Enter
+  nearLift: number; // + = hand raised (scene units)
+  nearDip: number;
+  farDip: number;
+};
+
+const typingAt = (frame: number): Typing => {
+  const count = KEY_TIMES.filter((t) => frame >= t).length;
+  const typing = frame >= TYPE_START && frame < TYPE_END + 8;
+  // Caret: solid while typing, blinking when idle, gone after Enter.
+  const caret = frame < ENTER_HIT && (typing || Math.floor(frame / 14) % 2 === 0);
+
+  // Each letter: one hand taps (alternating), a quick 2-in / 3-out dip.
+  let nearDip = 0;
+  let farDip = 0;
+  KEY_TIMES.forEach((t, i) => {
+    const d = interpolate(frame, [t - 2, t, t + 3], [0, 9, 0], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    });
+    if (i % 2 === 0) farDip += d;
+    else nearDip += d;
+  });
+
+  const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
+  // Wind-up: the near hand rises, hangs, then slams down onto Enter.
+  const nearLift = interpolate(
+    frame,
+    [TYPE_END + 4, ENTER_WINDUP, ENTER_HIT - 3, ENTER_HIT, ENTER_RELEASE, ENTER_RELEASE + 8],
+    [18, 46, 52, -4, -2, 22],
+    { ...clamp, easing: Easing.inOut(Easing.quad) },
+  );
+  const enterDown = interpolate(
+    frame,
+    [ENTER_HIT - 2, ENTER_HIT, ENTER_RELEASE, ENTER_RELEASE + 4],
+    [0, 1, 1, 0],
+    clamp,
+  );
+  const flash = interpolate(frame, [ENTER_HIT, ENTER_HIT + 14], [1, 0], {
+    ...clamp,
+    easing: Easing.out(Easing.quad),
+  });
+  const loading =
+    frame < ENTER_HIT
+      ? 0
+      : interpolate(frame, [ENTER_HIT + 2, ENTER_HIT + 40], [0, 0.72], {
+          ...clamp,
+          easing: Easing.out(Easing.cubic),
+        });
+  return {
+    typed: URL_TEXT.slice(0, count),
+    caret,
+    enterDown,
+    flash: frame >= ENTER_HIT ? flash : 0,
+    loading,
+    nearLift,
+    nearDip,
+    farDip,
+  };
+};
+
+const Browser: React.FC<{ typed: string; caret: boolean; flash: number; loading: number }> = ({
+  typed,
+  caret,
+  flash,
+  loading,
+}) => (
   <g>
     <clipPath id="s1-browser">
       <rect x={0} y={0} width={SCREEN_W} height={SCREEN_H} rx={6} />
@@ -279,15 +365,62 @@ const Browser: React.FC<{ typed: string; caret: boolean }> = ({ typed, caret }) 
       {[0, 1, 2, 3].map((i) => (
         <rect key={i} x={74 + i * 56} y={176} width={42} height={42} rx={10} fill={COLORS.wall} />
       ))}
+      {/* Page-load bar under the toolbar once Enter is pressed. */}
+      {loading > 0 ? (
+        <rect x={0} y={45} width={SCREEN_W * loading} height={5} fill={COLORS.network} />
+      ) : null}
+      {/* Click flash: the address bar lights up, the screen pulses. */}
+      {flash > 0 ? (
+        <>
+          <rect x={0} y={0} width={SCREEN_W} height={SCREEN_H} fill={COLORS.white} opacity={flash * 0.55} />
+          <rect
+            x={66 - 6 * flash}
+            y={10 - 4 * flash}
+            width={282 + 12 * flash}
+            height={26 + 8 * flash}
+            rx={17}
+            fill="none"
+            stroke={COLORS.network}
+            strokeWidth={3}
+            opacity={flash}
+          />
+        </>
+      ) : null}
     </g>
   </g>
 );
 
-const LaptopSide: React.FC<{ typed: string; caret: boolean; enterDown: number }> = ({
-  typed,
-  caret,
-  enterDown,
-}) => {
+// Cartoon "click!" burst at the Enter key: a ring plus short spark lines.
+const ClickBurst: React.FC<{ x: number; y: number; t: number }> = ({ x, y, t }) => {
+  if (t <= 0) return null;
+  const p = 1 - t; // 0 → 1 as it expands
+  const ring = 30 + p * 70;
+  return (
+    <g opacity={t}>
+      <ellipse cx={x} cy={y} rx={ring * 1.3} ry={ring * 0.6} fill="none" stroke={COLORS.white} strokeWidth={6 * t + 1} />
+      {[-150, -110, -70, -30].map((a) => {
+        const rad = (a * Math.PI) / 180;
+        const r0 = 46 + p * 40;
+        const r1 = r0 + 28;
+        return (
+          <line
+            key={a}
+            x1={x + Math.cos(rad) * r0}
+            y1={y + Math.sin(rad) * r0}
+            x2={x + Math.cos(rad) * r1}
+            y2={y + Math.sin(rad) * r1}
+            stroke={COLORS.ink}
+            strokeWidth={5}
+            strokeLinecap="round"
+          />
+        );
+      })}
+    </g>
+  );
+};
+
+const LaptopSide: React.FC<{ t: Typing }> = ({ t }) => {
+  const { enterDown } = t;
   const keys: React.ReactNode[] = [];
   for (let row = 0; row < 4; row++) {
     for (let col = 0; col < 11; col++) {
@@ -349,7 +482,7 @@ const LaptopSide: React.FC<{ typed: string; caret: boolean; enterDown: number }>
           stroke={COLORS.ink}
           strokeWidth={OUTLINE}
         />
-        <Browser typed={typed} caret={caret} />
+        <Browser typed={t.typed} caret={t.caret} flash={t.flash} loading={t.loading} />
         <rect x={0} y={0} width={SCREEN_W} height={SCREEN_H} rx={6} fill="none" stroke={COLORS.ink} strokeWidth={3} />
       </g>
     </g>
@@ -376,14 +509,17 @@ const DeskSide: React.FC = () => (
   </g>
 );
 
-type SideProps = { typed: string; caret: boolean; enterDown: number };
-
-export const SideView: React.FC<SideProps> = ({ typed, caret, enterDown }) => {
-  // Hands: near hand hovers over Enter and dips with the press;
-  // far hand rests further along the keyboard.
-  const press = enterDown * 10;
-  const nearHand = toPersonLocal([ENTER_POS[0] - 4, ENTER_POS[1] - 14 + press]);
-  const farHand = toPersonLocal(baseToScene(150, 30));
+export const SideView: React.FC<{ t: Typing }> = ({ t }) => {
+  // Hands: the near hand hovers just behind Enter (so the key stays visible),
+  // taps on its letters, winds up and slams down on Enter.
+  // The far hand rests further along the keyboard and taps the other letters.
+  const nearHand = toPersonLocal([
+    // Lifted → sits behind the key; pressing → slides onto it.
+    ENTER_POS[0] - 6 - 24 * Math.min(1, Math.max(0, t.nearLift / 18)),
+    ENTER_POS[1] - 12 - t.nearLift + t.nearDip,
+  ]);
+  const farRest = baseToScene(150, 30);
+  const farHand = toPersonLocal([farRest[0], farRest[1] + t.farDip]);
   const screenCenter = screenToScene(SCREEN_W / 2, SCREEN_H / 2);
   return (
     <g>
@@ -392,8 +528,9 @@ export const SideView: React.FC<SideProps> = ({ typed, caret, enterDown }) => {
       <ScreenGlow cx={screenCenter[0]} cy={screenCenter[1]} strength={1.2} />
       <DeskSide />
       <Lamp x={1760} />
-      <LaptopSide typed={typed} caret={caret} enterDown={enterDown} />
+      <LaptopSide t={t} />
       <Person x={SIDE_PERSON[0]} y={SIDE_PERSON[1]} view="side" nearHand={nearHand} farHand={farHand} />
+      <ClickBurst x={ENTER_POS[0]} y={ENTER_POS[1] - 6} t={t.flash} />
     </g>
   );
 };
@@ -449,7 +586,7 @@ export const S1Room: React.FC = () => {
       ) : null}
       {showSide ? (
         <Camera {...sideShot(frame)} panX={offset + WHIP_DISTANCE} smear={smear}>
-          <SideView typed="" caret={Math.floor(frame / 15) % 2 === 0} enterDown={0} />
+          <SideView t={typingAt(frame)} />
         </Camera>
       ) : null}
     </AbsoluteFill>
