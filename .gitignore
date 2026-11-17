@@ -1,0 +1,11 @@
+node_modules/
+out/
+.venv/
+*.onnx
+*.bin
+*.wav
+*.mp4
+.claude/skills/lab06-collect/
+.DS_Store
+dist/
+.env
