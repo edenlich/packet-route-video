@@ -1,5 +1,6 @@
 import React from "react";
-import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
+import { Audio } from "@remotion/media";
+import { AbsoluteFill, Easing, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { Camera, Shot, easedMove } from "../components/Camera";
 import { Person } from "../components/Person";
 import { LimbPath, Shape, circ, rr } from "../components/Shape";
@@ -8,6 +9,10 @@ import { COLORS, FONT, OUTLINE, VIDEO } from "../theme";
 // Scene 1 — The room. A person at a desk in the evening, seen from behind.
 
 export const S1_DURATION = 300;
+
+// Narration (public/audio/s1.wav, ~7.3 s ≈ 218 frames) starts shortly after
+// the scene opens and finishes just before the Enter press (~frame 267).
+const NARRATION_START = 20;
 
 const FLOOR_Y = 880;
 const DESK_TOP = 640;
@@ -589,6 +594,9 @@ export const S1Room: React.FC = () => {
           <SideView t={typingAt(frame)} />
         </Camera>
       ) : null}
+      <Sequence from={NARRATION_START} layout="none">
+        <Audio src={staticFile("audio/s1.wav")} />
+      </Sequence>
     </AbsoluteFill>
   );
 };
