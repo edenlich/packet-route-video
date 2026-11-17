@@ -1,6 +1,6 @@
 import React from "react";
-import { AbsoluteFill } from "remotion";
-import { Camera, FULL_SHOT } from "../components/Camera";
+import { AbsoluteFill, useCurrentFrame } from "remotion";
+import { Camera, Shot, easedMove } from "../components/Camera";
 import { Person } from "../components/Person";
 import { LimbPath, Shape, circ, rr } from "../components/Shape";
 import { COLORS } from "../theme";
@@ -210,10 +210,21 @@ export const BackView: React.FC = () => (
   </g>
 );
 
+// ---------- Camera plan ----------
+
+// Back view: slow push-in from the wide room toward the person + laptop.
+// The move is timed to end after the whip-pan so it's still moving
+// (never settled) when the camera whips away around frame 120.
+const BACK_WIDE: Shot = { x: 960, y: 540, zoom: 1.0, rotate: 0 };
+const BACK_CLOSE: Shot = { x: 925, y: 545, zoom: 1.4, rotate: -0.6 };
+const backShot = (frame: number) =>
+  easedMove({ frame, from: BACK_WIDE, to: BACK_CLOSE, start: 0, end: 150 });
+
 export const S1Room: React.FC = () => {
+  const frame = useCurrentFrame();
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.background }}>
-      <Camera {...FULL_SHOT}>
+      <Camera {...backShot(frame)}>
         <BackView />
       </Camera>
     </AbsoluteFill>
