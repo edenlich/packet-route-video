@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { VIDEO } from "../theme";
 
@@ -97,6 +97,10 @@ type CameraProps = Partial<Shot> & {
   children: React.ReactNode;
   drift?: number; // 0 = locked, 1 = default drift
   background?: string;
+  // Screen-space horizontal offset in px (for whip-pans between sets).
+  panX?: number;
+  // Horizontal motion smear (blur radius in px, 0 = sharp).
+  smear?: number;
 };
 
 // Wraps a scene drawn in 1920×1080 SVG space. Centers (x, y) on screen,
@@ -108,16 +112,19 @@ export const Camera: React.FC<CameraProps> = ({
   rotate = 0,
   drift = 1,
   background,
+  panX = 0,
+  smear = 0,
   children,
 }) => {
   const { dx, dy, dr } = useDrift(drift);
+  const filterId = `smear${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const cx = VIDEO.width / 2;
   const cy = VIDEO.height / 2;
 
   // Read right-to-left: move the target to the origin, rotate + zoom,
-  // put it at the screen center, then nudge by the drift.
+  // put it at the screen center, then nudge by the drift and pan.
   const transform = [
-    `translate(${cx + dx} ${cy + dy})`,
+    `translate(${cx + dx + panX} ${cy + dy})`,
     `rotate(${rotate + dr})`,
     `scale(${zoom})`,
     `translate(${-x} ${-y})`,
@@ -130,7 +137,17 @@ export const Camera: React.FC<CameraProps> = ({
       viewBox={`0 0 ${VIDEO.width} ${VIDEO.height}`}
       style={{ position: "absolute", inset: 0, background }}
     >
-      <g transform={transform}>{children}</g>
+      {smear > 0.5 ? (
+        <defs>
+          {/* Blur only along x: a cartoon whip smear. Region in screen space. */}
+          <filter id={filterId} filterUnits="userSpaceOnUse" x={-400} y={-200} width={VIDEO.width + 800} height={VIDEO.height + 400}>
+            <feGaussianBlur stdDeviation={`${smear} 0`} edgeMode="duplicate" />
+          </filter>
+        </defs>
+      ) : null}
+      <g filter={smear > 0.5 ? `url(#${filterId})` : undefined}>
+        <g transform={transform}>{children}</g>
+      </g>
     </svg>
   );
 };

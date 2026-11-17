@@ -1,9 +1,9 @@
 import React from "react";
-import { AbsoluteFill, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
 import { Camera, Shot, easedMove } from "../components/Camera";
 import { Person } from "../components/Person";
 import { LimbPath, Shape, circ, rr } from "../components/Shape";
-import { COLORS, FONT, OUTLINE } from "../theme";
+import { COLORS, FONT, OUTLINE, VIDEO } from "../theme";
 
 // Scene 1 — The room. A person at a desk in the evening, seen from behind.
 
@@ -414,21 +414,44 @@ const SIDE_CLOSE: Shot = { x: 1260, y: 560, zoom: 1.7, rotate: 0 };
 const sideShot = (frame: number) =>
   easedMove({ frame, from: SIDE_WIDE, to: SIDE_CLOSE, start: 110, end: 320 });
 
-const SWITCH = 120;
+// Whip-pan (fake orbit): both views sit side by side like one long strip
+// and the camera whips right across it in ~6 frames, centered on frame 120.
+const WHIP_START = 117;
+const WHIP_END = 123;
+const WHIP_DISTANCE = VIDEO.width + 200;
+const MAX_SMEAR = 70;
+
+const whip = (frame: number) => {
+  const p = interpolate(frame, [WHIP_START, WHIP_END], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.inOut(Easing.cubic),
+  });
+  // Smear follows speed: zero at both ends, strongest mid-whip.
+  const raw = interpolate(frame, [WHIP_START, WHIP_END], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  return { offset: -p * WHIP_DISTANCE, smear: Math.sin(Math.PI * raw) * MAX_SMEAR };
+};
 
 export const S1Room: React.FC = () => {
   const frame = useCurrentFrame();
+  const { offset, smear } = whip(frame);
+  const showBack = frame < WHIP_END;
+  const showSide = frame >= WHIP_START;
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.background }}>
-      {frame < SWITCH ? (
-        <Camera {...backShot(frame)}>
+      {showBack ? (
+        <Camera {...backShot(frame)} panX={offset} smear={smear}>
           <BackView />
         </Camera>
-      ) : (
-        <Camera {...sideShot(frame)}>
+      ) : null}
+      {showSide ? (
+        <Camera {...sideShot(frame)} panX={offset + WHIP_DISTANCE} smear={smear}>
           <SideView typed="" caret={Math.floor(frame / 15) % 2 === 0} enterDown={0} />
         </Camera>
-      )}
+      ) : null}
     </AbsoluteFill>
   );
 };
