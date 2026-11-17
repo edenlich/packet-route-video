@@ -24,6 +24,10 @@ export const COLORS = {
   networkShade: "#2C86B0",
   backgroundShade: "#F0E2C8",
 
+  // Reply envelope (Scene 9) — the page travelling back.
+  reply: "#7CC47F",
+  replyShade: "#5EA562",
+
   // Extras for characters and props, kept warm to match.
   skin: "#F5C9A0",
   skinShade: "#DDA97F",
