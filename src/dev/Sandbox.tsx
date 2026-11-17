@@ -2,6 +2,7 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { Camera, FULL_SHOT, springMove } from "../components/Camera";
 import { COLORS, FONT, OUTLINE, outlined } from "../theme";
+import { Person } from "../components/Person";
 
 // Dev-only preview for shared pieces (not part of the video).
 // Shows the camera drift over a grid, then one spring-eased push-in.
@@ -41,6 +42,7 @@ export const Sandbox: React.FC = () => {
         <rect x={1100} y={640} width={200} height={40} fill={COLORS.packetShade} clipPath="url(#sandbox-box)" />
         <rect x={1100} y={520} width={200} height={160} rx={24} fill="none" {...outlined} />
         <circle cx={700} cy={500} r={80} fill={COLORS.network} {...outlined} />
+        <Person x={420} y={1000} scale={1.2} />
         <text
           x={960}
           y={900}
