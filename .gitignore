@@ -4,6 +4,7 @@ out/
 *.onnx
 *.bin
 *.wav
+!public/audio/*.wav
 *.mp4
 .claude/skills/lab06-collect/
 .DS_Store
