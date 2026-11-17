@@ -23,112 +23,163 @@
 - Font for on-screen text: a rounded hand-drawn-ish font (e.g. "Fredoka" or "Baloo 2" via `@remotion/google-fonts`).
 
 **Camera: always floating, always following motion.**
-- Build one reusable `<Camera>` wrapper: `({x, y, zoom, rotate}) => transform` applied to the whole scene's SVG.
+- One reusable `<Camera>` wrapper: `({x, y, zoom, rotate}) => transform` applied to the whole scene's SVG.
 - Every camera move uses `spring()` or eased `interpolate()` — never linear.
-- Add a constant subtle drift on top of every move (a slow sine wave, ±4 px, ±0.3°) so the camera never feels locked.
-- The camera follows whatever is moving (the note, the packet). Lead the motion slightly: the camera starts moving a few frames before the object does.
+- A constant subtle drift on top of every move (slow sine wave, ±4 px, ±0.3°) so the camera never feels locked.
+- The camera follows whatever is moving (the note, the packet), leading the motion slightly.
 
-**Transitions:** no hard cuts. Use push-ins, whip-pans, or match-cuts (one shape becomes another).
+**Transitions:** no hard cuts. Push-ins, whip-pans, or match-cuts.
 
 **Video settings:** 1920×1080, 30 fps.
 
 ---
 
+## Project structure (built for parallel agents)
+
+```
+src/
+  theme.ts                 # colors, fonts, outline width — shared, rarely edited
+  components/
+    Camera.tsx             # floating camera wrapper — shared
+    Bubble.tsx             # speech bubble — shared
+    Envelope.tsx           # the request packet with an address label — shared
+    Person.tsx             # the person at the desk (used in S1 and S5) — shared
+  scenes/
+    S1Room.tsx
+    S2Dive.tsx
+    S3Question.tsx
+    S4Note.tsx
+    S5BackToRequest.tsx
+    S6DNS.tsx
+    S7HomeRouter.tsx
+    S8Hops.tsx
+    S9Arrival.tsx
+  Main.tsx                 # the full video: <Series> of all scenes, in order
+  Root.tsx                 # registers Main + every scene as its own composition
+public/audio/              # one WAV per narration line: s1.wav, s3.wav, s4.wav ...
+```
+
+**Rules:**
+- Each scene is self-contained: its own drawings, camera moves, and its own `<Audio>` for its narration. Timing starts at frame 0 inside each file.
+- Each scene exports its length: `export const S1_DURATION = 270;` (frames at 30fps). `Main.tsx` uses these to sequence the scenes.
+- `Root.tsx` registers every scene as its own composition so each can be previewed alone in Studio, plus `Main` for the full video.
+- Shared files (`theme.ts`, `components/`) are built first, before parallel work starts. After that, changes to them go through one agent only.
+- **One agent = one scene file.** Only one agent edits `Main.tsx` / `Root.tsx`.
+- When committing, each agent stages only its own files (`git add src/scenes/S4Note.tsx public/audio/s4*.wav`), never `git add .`.
+
+**Parallel prompt template:**
+> Read SCRIPT.md (style guide + Scene N). You own only `src/scenes/SN….tsx` and `public/audio/sN*.wav`. Don't edit any other file. Build the next small step of Scene N, show it in Studio (composition `SN…`), and commit only your files.
+
+---
+
 ## Scenes
 
-Timings are targets, not rules. A partial video is fine.
+Timings are targets, not rules. Total ≈ 60 seconds. A partial video is fine.
 
-### Scene 1 — The room (0:00–0:09) · `src/scenes/S1Room.tsx`
+### Scene 1 — The room (0:00–0:09) · `S1Room.tsx`
 
-**Visual:**
-A cozy room at evening. A person sits on an office chair at a desk with a laptop. Warm desk lamp.
+**Visual:** A cozy room at evening. A person on an office chair at a desk with a laptop. Warm desk lamp.
 
-**Camera:**
-Starts behind the person (we see the chair back, shoulders, laptop glow). Floats around to a 3/4 side view facing the screen.
+**Camera:** Starts behind the person, floats around to a 3/4 side view facing the screen.
 
-> Implementation note: a true 3D orbit is expensive to draw in 2D. Fake it:
-> 1. Back view: slow push-in with drift (0:00–0:04).
-> 2. Whip-pan to the side (motion blur via a quick horizontal smear, ~6 frames).
-> 3. 3/4 side view: slow push-in toward the screen (0:04–0:09).
-> Two drawings + one whip-pan reads as a camera orbit.
+> Fake the orbit: back view with slow push-in (0:00–0:04) → whip-pan (~6 frames, horizontal smear) → 3/4 side view with slow push-in (0:04–0:09).
 
-**Action:**
-In the side view we see the screen: a browser **address bar**. The text `moodle.com` types itself letter by letter, then a key press on Enter (small key squash + click flash).
+**Action:** In the side view, a browser **address bar**. `moodle.com` types itself letter by letter, then Enter (key squash + click flash).
 
-**Narration (narrator voice):**
+**Narration:**
 > Every day, we send countless requests across the internet — every click, every search, every page we open.
 
 ---
 
-### Scene 2 — Into the screen (0:09–0:12) · `src/scenes/S2Dive.tsx`
+### Scene 2 — Into the screen (0:09–0:12) · `S2Dive.tsx`
 
-**Visual + camera:**
-After Enter, the camera pushes straight into the laptop screen. The screen fills the frame, flashes white, and fades to an empty cream canvas.
+**Visual + camera:** The camera pushes into the laptop screen, flashes white, fades to an empty cream canvas.
 
-**Narration:** none (let the narration from Scene 1 finish; small "whoosh" is optional).
+**Narration:** none.
 
 ---
 
-### Scene 3 — The question (0:12–0:18) · `src/scenes/S3Question.tsx`
+### Scene 3 — The question (0:12–0:18) · `S3Question.tsx`
 
-**Visual:**
-Empty canvas. A small dotted line starts drawing from the left edge, wanders, and stops in the middle with a hand-drawn "?" at its end.
+**Visual:** Empty canvas. A dotted line draws from the left, wanders, and ends in the middle with a hand-drawn "?".
 
-**Camera:** slow drift, very slight push-in on the "?".
+**Camera:** slow drift, slight push-in on the "?".
 
 **Narration:**
-> But how does that request actually find its way — all the way to the right place, and back with the page we asked for?
+> But how does that request actually find its way — all the way to the right place?
 
 ---
 
-### Scene 4 — The lecture hall (0:18–0:40) · `src/scenes/S4LectureHall.tsx`
+### Scene 4 — The note (0:18–0:28) · `S4Note.tsx` — **short analogy, ~10 seconds**
 
-**Visual:**
-A big lecture hall, drawn from a slightly elevated side angle. Rows of seats going toward a board at the front. Rows are numbered on the aisle side (1 at the front, ~9 at the back).
+**Visual:** A lecture hall, simple and quick. Rows numbered on the aisle side.
 
-**Beat 4a — The note (0:18–0:24)**
-- Camera starts zoomed in on a student in the **back row**. She writes on a small paper, folds it (2–3 frame fold animation), and taps the shoulder of the student in front of her.
-- Speech bubble + character voice:
-  > Pass this to row 3, seat 5.
-
-**Beat 4b — Hand to hand (0:24–0:35)**
-- The note passes forward, hand to hand, one row at a time.
-- Above each person who passes it, a tiny bubble pops: **"Not me — forward ↑"**
-- **The camera travels with the note**, staying close. Each pass is a small arc (note follows a curve, camera follows with slight lag).
-- Rhythm speeds up: the first two passes are slow and clear, then faster.
-
-**Beat 4c — Delivery (0:35–0:40)**
-- Note reaches **row 3**. That student looks along the row (head turn), then passes it sideways to **seat 5**.
-- Bubble: **"Row 3? That's my row — seat 5 is right here."**
-- Seat 5 opens the note. Small happy reaction.
-
-**Narration (over 4b–4c):**
-> Nobody in between knows who's sitting in row 3, seat 5. Each person only knows one thing: row 3 is ahead of them — so they pass it forward. Only someone in row 3 needs to look for seat 5.
-
----
-
-### Scene 5 — The hall becomes the internet (0:40–0:46) · `src/scenes/S5Transform.tsx`
-
-**Visual (match-cut):**
-Camera pulls back from the hall. The seats morph into router nodes (circles with the network accent color), the aisles become connecting lines, and the folded note becomes a small envelope labeled with a destination address.
-
-> Use the real address for moodle.com: run `dig +short moodle.com` during the lab and put the first result on the label. Do not invent an address.
+**Action (fast):**
+1. Close on a student in the back row. She folds a small note and taps the student in front: bubble **"Row 3, seat 5!"** (0:18–0:21)
+2. The note jumps forward hand to hand in quick arcs, a tiny **"→"** bubble over each hand. Camera follows the note. (0:21–0:26)
+3. In row 3 it goes sideways and lands in seat 5's hands. (0:26–0:28)
 
 **Narration:**
-> The internet works the same way.
+> Think of passing a note in a lecture hall. Nobody knows who's in row 3, seat 5 — each person just passes it one row closer.
 
 ---
 
-### Scenes 6+ — Routing (to build after Scenes 1–5 work)
+### Scene 5 — Back to our request (0:28–0:31) · `S5BackToRequest.tsx`
 
-Rough plan, refine in the lab:
+**Visual:** A quick cartoon "rewind" (the note scene smears/spins away) and we're back at the person at the desk, side view, the moment Enter is pressed. A small envelope (`#FF7A59`) pops out of the laptop and hovers next to it. Its label reads only **`moodle.com`**.
 
-- **S6 Hops:** the envelope moves router to router. Each router shows a bubble: *"I don't know where that is — but this way gets you closer."* The chosen link glows; the rest stay dim. Camera follows the envelope.
-- **S7 A link fails (optional):** one link turns red and breaks; the router picks another link; the envelope goes around.
-- **S8 Arrival and reply:** the last router: *"That's mine!"* The server sends a reply envelope (different color) back, possibly by a different path. Pull back to show both paths.
+**Camera:** settles on the laptop and the envelope.
 
-**Narration draft:**
-> At every router, the same answer: "I don't know where that is — but I know which way gets you closer." No router sees the whole route. Only the last one says: "That's mine." And the reply finds its way back the same way — no map, no master plan, just one local decision at a time.
+**Narration:**
+> Back to our request.
+
+---
+
+### Scene 6 — Name to address: DNS (0:31–0:38) · `S6DNS.tsx`
+
+**Visual:**
+1. The envelope hovers; its label `moodle.com` gets a small "?" next to it.
+2. A small question card flies from the laptop off to a **DNS server** (cartoon server with a phone-book / address-book icon and the label "DNS"): **"Where is moodle.com?"**
+3. The DNS server flips through its book and sends back a card with a number.
+4. The label on the envelope flips over: `moodle.com` → the IP address.
+
+> Use `203.0.113.7` on the label everywhere in the video. It's from a range reserved for documentation and examples, so it's an obviously illustrative address and doesn't belong to anyone.
+
+**Camera:** follows the question card out and back, then returns to the envelope for the label flip.
+
+**Narration:**
+> But unlike the note, "moodle.com" isn't an address — it's just a name. So first, your computer asks a DNS server to translate it into a number: an IP address.
+
+---
+
+### Scene 7 — The home router (0:38–0:43) · `S7HomeRouter.tsx`
+
+**Visual:** The envelope flies to a small home router (box with antennas, blinking lights) on a shelf in the same room. Router bubble:
+**"Not for this house… → internet provider!"**
+The envelope shoots out through a cable in the wall.
+
+**Narration:**
+> First stop: your home router. It knows almost nothing — just that anything outside your home goes to your internet provider.
+
+---
+
+### Scene 8 — Hop by hop (0:43–0:55) · `S8Hops.tsx`
+
+**Visual:** Camera pulls out to a wide map-like view: clusters of routers (rack boxes) connected by lines — first your provider's network, then other networks. Most lines dim, the chosen line glows.
+
+**Action:** The envelope jumps router to router. Over each router a bubble pops: **"Don't know where that is — but this way's closer →"**. The first two hops are slow and readable, then it speeds up. Camera follows the envelope.
+
+**Narration:**
+> Your provider's routers don't know where moodle.com is either. Each one just knows which neighbor gets it closer — and passes it on. Hop by hop, just like the note.
+
+---
+
+### Scene 9 — Arrival and return (0:55–1:03) · `S9Arrival.tsx`
+
+**Visual:** The last router's bubble: **"That's mine! →"** and it hands the envelope to the server (a cartoon server rack with the Moodle-style label "moodle.com" in plain text — no logo). The server sends back a reply envelope in a different color. Pull back: both paths glow on the map. Final text on screen: the takeaway sentence.
+
+**Narration:**
+> Only the last router knows exactly where it goes. Then the page travels back the same way — no map, no master plan, just one step closer at a time.
 
 ---
 
@@ -136,10 +187,9 @@ Rough plan, refine in the lab:
 
 | Role | Voice | Notes |
 |---|---|---|
-| Narrator | `am_michael` (or `af_sarah`) | calm, speed 1.0 |
-| Student in Scene 4 | `af_bella` | slightly faster, speed 1.1 |
+| Narrator | `am_michael` | calm, speed 1.0 |
 
-Generate one WAV per line (`audio/s1.wav`, `audio/s3.wav`, `audio/s4-student.wav`, …) and place each with Remotion's `<Audio>` inside its scene's `<Sequence>`, so timing lives with the scene.
+Generate one WAV per scene line (`public/audio/s1.wav`, `s3.wav`, `s4.wav`, `s5.wav`, `s6.wav`, `s7.wav`, `s8.wav`, `s9.wav`) with `tts.py`, and place each with `<Audio>` inside its own scene. If a WAV is longer than its scene, lengthen the scene (update its exported duration) rather than speeding up the voice.
 
 ---
 
@@ -147,28 +197,31 @@ Generate one WAV per line (`audio/s1.wav`, `audio/s3.wav`, `audio/s4-student.wav
 
 Every narrated claim must stay inside this list:
 
-- [x] A request travels as packets carrying a destination address that stays the same along the way.
+- [x] Routers work with numeric IP addresses, not names; a DNS server translates a name like moodle.com into an IP address before the request is sent.
+- [x] The request travels as packets carrying a destination address that stays the same along the way.
+- [x] A home router sends anything not addressed to the home network to the internet provider (its default route).
 - [x] Each router decides only the next hop; no router knows the whole path.
-- [x] Only the router connected to the destination's network delivers it directly.
-- [x] If a link fails, routers can choose a different next hop.
-- [x] The reply can come back by a different path.
+- [x] The request may cross several networks (the provider's, then others) before reaching the destination's network.
+- [x] Only the router connected to the destination's network delivers it directly to the server.
+- [x] The reply travels back the same way (hop by hop), not necessarily on the same path.
 
-Deliberately left out (true but out of scope): DNS details, MAC addresses, TTL, NAT, TCP/TLS.
+Wording rule: routers **forward** (pass on) the packet — they don't "refer" the user to someone else. Intermediate machines are **routers**, not servers; the **server** is only the destination.
+
+Visual caveat for Scene 6: keep the DNS question's trip abstract (it flies off-screen and back). Don't show it skipping the home router or claim it goes there directly — in reality the DNS question travels over the network too.
+
+Deliberately left out: how DNS lookups are resolved (resolvers, root/TLD servers, caching), MAC addresses, TTL, NAT, TCP/TLS, CDNs.
 
 ---
 
 ## Build order (small steps, commit after each)
 
-1. `<Camera>` wrapper with drift + a test rectangle. Preview in Studio.
-2. S1 back view (static drawing). Then camera push-in.
-3. S1 side view + typing `moodle.com` + Enter.
-4. Whip-pan between the two S1 views.
-5. S2 dive into screen.
-6. S3 question.
-7. S4 hall drawing (static).
-8. S4a note + bubble. 9. S4b passing with camera follow. 10. S4c delivery.
-11. Narration WAVs + `<Audio>` per scene.
-12. S5 morph.
-13. Render `render-01.mp4`. Then S6+ if time allows.
+1. Shared: `theme.ts`, `<Camera>` with drift, `Bubble`, `Envelope`, `Person`.
+2. S1 back view → push-in → side view → whip-pan → typing + Enter → narration.
+3. S2 dive. S3 question.
+4. S4 note (can run in parallel with S1–S3 once shared files exist).
+5. S5 back to request. S6 DNS. S7 home router.
+6. S8 hops (the most work — start early in a parallel window).
+7. S9 arrival.
+8. `Main.tsx` sequencing → render `render-01.mp4`. Then iterate.
 
 **Rules:** one scene or one change per step · check the live preview, not full renders · never overwrite a render (`render-01.mp4`, `render-02.mp4`, …).
