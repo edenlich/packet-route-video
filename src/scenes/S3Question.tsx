@@ -9,20 +9,21 @@ import { COLORS, OUTLINE } from "../theme";
 // Scene 3 — The question. See SCRIPT.md → "Scene 3".
 // Empty cream canvas (continues from S2's fade). A little orange "request"
 // dot with dot eyes wanders in from the left, leaving a dotted trail. It
-// hesitates in the middle of the narration (the pause after "find its way"),
+// hesitates in the middle of the narration (the pause after "destination server"),
 // then finishes its trip into the centre, where the pen-stroke turns into a
 // hand-drawn "?" and the dot itself hops down to become the question mark's dot.
 
-// Narration public/audio/s3.wav is 4.67s → 4.67s + 0.5s tail = 156 frames @ 30fps.
-export const S3_DURATION = 156;
+// Narration public/audio/s3.wav is 7.57s → 7.57s + 0.5s tail = 242 frames @ 30fps.
+export const S3_DURATION = 242;
 
-// Beat timing (frames). Narration has a pause at ~2.55–3.05 s (frames 76–92).
+// Beat timing (frames). Narration has a pause at ~3.56–4.20 s (frames 107–126)
+// and ends at ~7.38 s (frame 221).
 const WANDER_START = 2;
-const WANDER_END = 76; // "...actually find its way" — trail reaches the loop
-const PAUSE_END = 90; // dot hesitates during the narration pause
-const TRAIL_END = 108; // "all the way..." — trail reaches the centre
-const HOOK_END = 128; // "...to the right" — the "?" hook is drawn
-const HOP_END = 138; // "place?" — dot hops down and becomes the "?" dot
+const WANDER_END = 107; // "...reach the destination server" — trail reaches the loop
+const PAUSE_END = 124; // dot hesitates during the narration pause
+const TRAIL_END = 172; // "the one that knows how to send back..." — trail reaches the centre
+const HOOK_END = 206; // "...the answer we asked" — the "?" hook is drawn
+const HOP_END = 220; // "for?" — dot hops down and becomes the "?" dot
 const WANDER_FRACTION = 0.68; // share of the trail drawn before the pause
 
 // The wandering trail: from off-screen left, a rise, a dip, a loop, then an

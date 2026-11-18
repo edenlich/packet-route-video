@@ -106,7 +106,7 @@ Timings are targets, not rules. Total ≈ 60 seconds. A partial video is fine.
 **Camera:** slow drift, slight push-in on the "?".
 
 **Narration:**
-> But how does that request actually find its way — all the way to the right place?
+> But how does that request actually reach the destination server — the one that knows how to send back the answer we asked for?
 
 ---
 
