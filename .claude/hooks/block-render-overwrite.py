@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""PreToolUse(Bash): block commands that would write to an existing render-*.mp4.
+"""PreToolUse(Bash): block commands that would write to an existing render-*.mp4
+or preview-*.mp4 (full-video renders and single-scene previews).
 
 Reading/copying FROM an existing render is allowed; only write targets are checked:
   - shell redirections (>, >>, >|, &>)
@@ -16,13 +17,13 @@ import re
 import shlex
 import sys
 
-RENDER_RE = re.compile(r"(^|/)render-[^/]*\.mp4$")
+RENDER_RE = re.compile(r"(^|/)(render|preview)-[^/]*\.mp4$")
 SEPARATORS = {"&&", "||", ";", "|", "&", "\n"}
 REDIRECTS = {">", ">>", ">|", "&>", "&>>", "1>", "2>", "1>>", "2>>"}
 COPY_CMDS = {"cp", "mv", "rsync", "ln", "install", "ditto"}
 OUTPUT_FLAGS = {"-o", "-O", "--output", "--out", "--output-file"}
 
-MESSAGE = "render file exists — use the next number (render-NN.mp4)"
+MESSAGE = "render file exists — use the next number (render-NN.mp4 / preview-sN-NN.mp4)"
 
 
 def tokenize(cmd):

@@ -252,3 +252,7 @@ Deliberately left out: how DNS lookups are resolved (resolvers, root/TLD servers
 8. `Main.tsx` sequencing → render `render-01.mp4`. Then iterate.
 
 **Rules:** one scene or one change per step · check the live preview, not full renders · never overwrite a render (`render-01.mp4`, `render-02.mp4`, …).
+
+**Render naming:**
+- `render-NN.mp4` = the full video (`Main`) only, numbered from `01`, never overwritten. This is what `lab06-collect` picks up.
+- `preview-sN-NN.mp4` = single-scene previews (e.g. `preview-s1-01.mp4` = first preview of Scene 1). Also never overwritten.
