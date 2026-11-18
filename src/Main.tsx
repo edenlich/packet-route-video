@@ -9,6 +9,7 @@ import { S6DNS, S6_DURATION } from "./scenes/S6DNS";
 import { S7HomeRouter, S7_DURATION } from "./scenes/S7HomeRouter";
 import { S8Hops, S8_DURATION } from "./scenes/S8Hops";
 import { S9Arrival, S9_DURATION } from "./scenes/S9Arrival";
+import { S10Finale, S10_DURATION } from "./scenes/S10Finale";
 
 // The full video: every scene in order. Each scene owns its length
 // (SN_DURATION), so Main never needs editing when a scene grows or shrinks.
@@ -22,6 +23,7 @@ export const SCENES = [
   { id: "S7HomeRouter", component: S7HomeRouter, duration: S7_DURATION },
   { id: "S8Hops", component: S8Hops, duration: S8_DURATION },
   { id: "S9Arrival", component: S9Arrival, duration: S9_DURATION },
+  { id: "S10Finale", component: S10Finale, duration: S10_DURATION },
 ] as const;
 
 export const MAIN_DURATION = SCENES.reduce((sum, s) => sum + s.duration, 0);
