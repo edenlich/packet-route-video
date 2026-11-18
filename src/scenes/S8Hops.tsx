@@ -8,12 +8,13 @@ import { Router } from "../components/Router";
 import { NODES, NetworkMap, NodeId, ROUTE, nodeAnchor, pointBetween } from "../components/NetworkMap";
 import { COLORS } from "../theme";
 
-// Scene 8 — Hop by hop. Picks up as Scene 7 ends: the envelope has just left the
-// home through the wall cable. The camera pulls out to the wide network map,
-// then follows the envelope router to router along ROUTE. Each router it reaches
-// pops "Don't know where that is — but this way's closer →". The first two hops
-// are slow; then it speeds up and stops on dst1 (the router on moodle.com's
-// network) — Scene 9 picks up there with "That's mine!".
+// Scene 8 — Hop by hop. Scene 7 ends on plain cream, so this opens on cream and
+// fades the map in while pulling out from the home router (the envelope has just
+// left through the cable). The camera then follows the envelope router to router
+// along ROUTE. Each router it reaches pops "Don't know where that is — but this
+// way's closer →". The first two hops are slow, then it speeds up. It ends on
+// S9's opening frame: wide shot {x 990, y 560, zoom 1}, envelope 55% along
+// tr3 → dst1, path glowing up to the envelope.
 //
 // Narration public/audio/s8.wav is 10.71s. Measured pauses (silencedetect):
 //   0.00–2.36s  "Your provider's routers don't know where moodle.com is either." (f 0–71)
@@ -38,7 +39,7 @@ const NODE_IDS = Object.keys(NODES) as NodeId[];
 
 const BUBBLE_TEXT = "Don't know where that is —\nbut this way's closer →";
 
-// ---------- The envelope's journey (all along ROUTE, stopping at dst1) ----------
+// ---------- The envelope's journey (along ROUTE, stopping partway to dst1) ----------
 
 type Hop = {
   from: NodeId;
@@ -47,6 +48,8 @@ type Hop = {
   end: number; // arrives at `to`
   arc: number;
   bubble?: { pop: number; out: number; fontSize: number }; // over `to` after arrival
+  // Stop this fraction of the way along the link, sitting on the cable (S9's opening frame).
+  stopAt?: number;
 };
 
 // ROUTE = home → isp1 → isp3 → tr2 → tr3 → dst1 → server. S8 covers the first five hops.
@@ -60,8 +63,9 @@ const HOPS: Hop[] = [
   // Then it speeds up.
   { from: ISP3, to: TR2, start: 192, end: 212, arc: 40, bubble: { pop: 213, out: 228, fontSize: 30 } },
   { from: TR2, to: TR3, start: 232, end: 250, arc: 40, bubble: { pop: 251, out: 265, fontSize: 30 } },
-  // Into moodle.com's network — no bubble here; S9 does "That's mine!".
-  { from: TR3, to: DST1, start: 270, end: 296, arc: 40 },
+  // Heading into moodle.com's network: ends 55% along tr3 → dst1, exactly where
+  // S9 opens (it does dst1's "That's mine!").
+  { from: TR3, to: DST1, start: 268, end: 318, arc: 25, stopAt: 0.55 },
 ];
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
@@ -80,12 +84,13 @@ const envelopeAt = (f: number): { p: P; rot: number } => {
       if (f < h.end) {
         const t = hopT(h, f, i);
         const a = perch(h.from);
-        const b = perch(h.to);
+        const b = h.stopAt === undefined ? perch(h.to) : pointBetween(h.from, h.to, h.stopAt);
         const lift = Math.sin(Math.PI * t) * h.arc;
         // Lean into the direction of travel.
         const rot = Math.sin(Math.PI * t) * Math.sign(b.x - a.x) * 8;
         return { p: { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t - lift }, rot };
       }
+      if (h.stopAt !== undefined) return { p: pointBetween(h.from, h.to, h.stopAt), rot: 0 };
       // Parked on h.to: a little landing bounce, then a gentle bob.
       const land = Math.sin(Math.PI * ease(f, h.end, h.end + 10, Easing.linear)) * 10;
       const bob = Math.sin((f - h.end) / 9) * 3 * ease(f, h.end + 8, h.end + 20);
@@ -100,8 +105,8 @@ const envelopeAt = (f: number): { p: P; rot: number } => {
 
 const OPEN: Shot = { x: NODES.home.x + 150, y: NODES.home.y - 110, zoom: 2.3, rotate: -0.6 };
 const WIDE: Shot = { x: 990, y: 560, zoom: 0.98, rotate: 0.3 };
-// Ends framing moodle.com's network: dst1 (with the envelope) and the server.
-const END: Shot = { x: 1610, y: 500, zoom: 1.4, rotate: -0.3 };
+// Ends on S9's opening shot: the whole map, wide.
+const END: Shot = { x: 990, y: 560, zoom: 1.0, rotate: 0 };
 
 // Follow the envelope, leading it a little (average of where it will be soon),
 // framed a bit above it so the router bubble stays in shot.
@@ -123,8 +128,8 @@ const shotAt = (f: number): Shot => {
   // Then follow: close for the slow hops, a bit wider once it speeds up.
   const followZoom = interpolate(f, [186, 214], [1.5, 1.2], { ...clamp, easing: Easing.inOut(Easing.sin) });
   const follow = mixShots(pull, followShot(f, followZoom), ease(f, 44, 80));
-  // Settle on moodle.com's network as the envelope reaches dst1.
-  return easedMove({ frame: f, from: follow, to: END, start: 280, end: 330 });
+  // Pull back to the whole map as the envelope heads into moodle.com's network.
+  return easedMove({ frame: f, from: follow, to: END, start: 272, end: 330 });
 };
 
 // ---------- Glowing path drawn behind the envelope ----------
@@ -156,6 +161,7 @@ export const S8Hops: React.FC = () => {
   // Routers light up when the envelope lands and fade after it leaves.
   const activeNodes: Partial<Record<NodeId, number>> = {};
   HOPS.forEach((h, i) => {
+    if (h.stopAt !== undefined) return; // never reaches dst1 in this scene
     const on = spring({ frame: frame - h.end, fps, config: { damping: 14 } });
     const next = HOPS[i + 1];
     const off = next ? ease(frame, next.start + 4, next.start + 24) : 0;
@@ -173,7 +179,7 @@ export const S8Hops: React.FC = () => {
           if (frame < h.start) return null;
           const t = hopT(h, frame, i);
           const a = nodeAnchor(h.from);
-          const b = pointBetween(h.from, h.to, t);
+          const b = pointBetween(h.from, h.to, t * (h.stopAt ?? 1));
           return <GlowSeg key={i} a={a} b={b} opacity={1} />;
         })}
 
@@ -207,6 +213,8 @@ export const S8Hops: React.FC = () => {
           return <Bubble key={i} x={NODES[h.to].x + 6} y={top} text={BUBBLE_TEXT} fontSize={fontSize} pop={pop} tail="center" />;
         })}
       </Camera>
+      {/* S7 ends on solid cream: start from that and let the map fade in under the pull-out. */}
+      <AbsoluteFill style={{ backgroundColor: COLORS.background, opacity: 1 - ease(frame, 0, 18, Easing.out(Easing.quad)) }} />
       <Audio src={staticFile("audio/s8.wav")} />
     </AbsoluteFill>
   );
