@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""PreToolUse(Edit|Write): block edits to shared files unless LAB_ROLE=integrator."""
+"""PreToolUse(Edit|Write): block edits to shared files unless integrator mode is on.
+
+Integrator mode is on when LAB_ROLE=integrator is set, or when the flag file
+.claude/INTEGRATOR exists in the project root (toggle it without restarting).
+"""
 import json
 import os
 import sys
@@ -13,12 +17,16 @@ def main():
         sys.exit(0)
 
     data = json.load(sys.stdin)
+    project = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or os.getcwd()
+    project = os.path.realpath(project)
+
+    if os.path.exists(os.path.join(project, ".claude", "INTEGRATOR")):
+        sys.exit(0)
+
     file_path = data.get("tool_input", {}).get("file_path") or ""
     if not file_path:
         sys.exit(0)
 
-    project = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or os.getcwd()
-    project = os.path.realpath(project)
     abs_path = os.path.realpath(os.path.join(project, file_path))
     rel = os.path.relpath(abs_path, project)
 
