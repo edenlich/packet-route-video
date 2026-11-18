@@ -16,12 +16,14 @@ import { SideView } from "./S1Room";
 // address book and sends back a card with the number, the camera whips back and
 // the envelope's label flips moodle.com → 203.0.113.7.
 
-// Narration public/audio/s6.wav is 11.16s. Beats (frames @ 30fps):
-//   0–24   "But unlike the note,"
-//   36–120 "'moodle.com' isn't an address — it's just a name."
-//   141–276 "So first, your computer asks a DNS server to translate it into a number:"
-//   294–333 "an IP address."
-export const S6_DURATION = 350;
+// Narration public/audio/s6.wav is 12.29s. Beats (frames @ 30fps):
+//   0–60    "Just like checking where your friend sits,"
+//   70–126  "your computer first needs an address."
+//   144–155 "'moodle.com'"
+//   163–238 "is only a name — so it asks a DNS server"
+//   240–314 "to translate it into a number:"
+//   329–369 "an IP address."
+export const S6_DURATION = 390;
 
 type SideViewState = React.ComponentProps<typeof SideView>["t"];
 
@@ -35,18 +37,18 @@ const lerpPt = (a: [number, number], b: [number, number], t: number): [number, n
 ];
 
 // ---------- Timeline ----------
-const QUESTION_POP = 44; // "?" next to the label, on "moodle.com"
-const SHRUG = 96; // little tilt on "just a name"
-const CARD_OUT = 142; // question card leaves the laptop, on "So first…"
-const WHIP_OUT: [number, number] = [176, 188];
-const CARD_ARRIVE = 206; // question card hovers by the DNS server
-const CARD_IN_BOOK: [number, number] = [214, 226];
-const BOOK_FLIP: [number, number] = [222, 252];
-const ANSWER_POP = 250; // on "…into a number"
-const ANSWER_LEAVE: [number, number] = [262, 282];
-const WHIP_BACK: [number, number] = [272, 284];
-const ANSWER_LAND = 294;
-const LABEL_FLIP: [number, number] = [297, 316]; // on "an IP address"
+const QUESTION_POP = 108; // "?" next to the label, on "…needs an address"
+const SHRUG = 160; // little tilt on "only a name"
+const CARD_OUT = 182; // question card leaves the laptop, on "so it asks…"
+const WHIP_OUT: [number, number] = [216, 228];
+const CARD_ARRIVE = 246; // question card hovers by the DNS server
+const CARD_IN_BOOK: [number, number] = [254, 266];
+const BOOK_FLIP: [number, number] = [262, 292];
+const ANSWER_POP = 290; // on "…into a number"
+const ANSWER_LEAVE: [number, number] = [302, 322];
+const WHIP_BACK: [number, number] = [312, 324];
+const ANSWER_LAND = 334;
+const LABEL_FLIP: [number, number] = [337, 356]; // on "an IP address"
 
 // ---------- Room set (S1's side view) ----------
 // Laptop state carried over from S1/S5: URL typed, Enter pressed, the page
@@ -88,7 +90,7 @@ const ROOM_LAND: Shot = { x: 1390, y: 300, zoom: 2.3, rotate: -0.3 };
 const ROOM_END: Shot = { x: 1530, y: 470, zoom: 1.4, rotate: 0 };
 
 const roomShot = (f: number): Shot => {
-  if (f < CARD_OUT - 4) return easedMove({ frame: f, from: ROOM_START, to: ROOM_HOLD, start: 0, end: 130 });
+  if (f < CARD_OUT - 4) return easedMove({ frame: f, from: ROOM_START, to: ROOM_HOLD, start: 0, end: 170 });
   if (f < WHIP_BACK[0]) return easedMove({ frame: f, from: ROOM_HOLD, to: ROOM_OUT, start: CARD_OUT - 4, end: WHIP_OUT[1] });
   const land = easedMove({ frame: f, from: ROOM_OUT, to: ROOM_LAND, start: WHIP_BACK[1] - 4, end: ANSWER_LAND + 4 });
   return mixShots(land, ROOM_END, ease(f, LABEL_FLIP[1] - 4, SETTLE[1], Easing.inOut(Easing.sin)));

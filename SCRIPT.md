@@ -159,7 +159,7 @@ The envelope reaches a person sitting in row 3. Bubble: "Row 3? Seat 5 is right 
 **Camera:** follows the question card out and back, then returns to the envelope for the label flip.
 
 **Narration:**
-> But unlike the note, "moodle.com" isn't an address — it's just a name. So first, your computer asks a DNS server to translate it into a number: an IP address.
+> Just like checking where your friend sits, your computer first needs an address. "moodle.com" is only a name — so it asks a DNS server to translate it into a number: an IP address.
 
 ---
 
