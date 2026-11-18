@@ -336,12 +336,13 @@ const typingAt = (frame: number): Typing => {
   };
 };
 
-const Browser: React.FC<{ typed: string; caret: boolean; flash: number; loading: number }> = ({
-  typed,
-  caret,
-  flash,
-  loading,
-}) => (
+const Browser: React.FC<{
+  typed: string;
+  caret: boolean;
+  flash: number;
+  loading: number;
+  page?: React.ReactNode;
+}> = ({ typed, caret, flash, loading, page }) => (
   <g>
     <clipPath id="s1-browser">
       <rect x={0} y={0} width={SCREEN_W} height={SCREEN_H} rx={6} />
@@ -364,12 +365,16 @@ const Browser: React.FC<{ typed: string; caret: boolean; flash: number; loading:
           |
         </tspan>
       </text>
-      {/* Empty new-tab page: a few soft placeholder blocks. */}
-      <rect x={110} y={84} width={140} height={22} rx={11} fill={COLORS.wall} />
-      <rect x={60} y={124} width={240} height={30} rx={15} fill={COLORS.background} stroke={COLORS.wallShade} strokeWidth={2} />
-      {[0, 1, 2, 3].map((i) => (
-        <rect key={i} x={74 + i * 56} y={176} width={42} height={42} rx={10} fill={COLORS.wall} />
-      ))}
+      {/* Page content: a custom page (S10) or the empty new-tab placeholder. */}
+      {page ?? (
+        <>
+          <rect x={110} y={84} width={140} height={22} rx={11} fill={COLORS.wall} />
+          <rect x={60} y={124} width={240} height={30} rx={15} fill={COLORS.background} stroke={COLORS.wallShade} strokeWidth={2} />
+          {[0, 1, 2, 3].map((i) => (
+            <rect key={i} x={74 + i * 56} y={176} width={42} height={42} rx={10} fill={COLORS.wall} />
+          ))}
+        </>
+      )}
       {/* Page-load bar under the toolbar once Enter is pressed. */}
       {loading > 0 ? (
         <rect x={0} y={45} width={SCREEN_W * loading} height={5} fill={COLORS.network} />
@@ -424,7 +429,7 @@ const ClickBurst: React.FC<{ x: number; y: number; t: number }> = ({ x, y, t }) 
   );
 };
 
-const LaptopSide: React.FC<{ t: Typing }> = ({ t }) => {
+const LaptopSide: React.FC<{ t: Typing; page?: React.ReactNode }> = ({ t, page }) => {
   const { enterDown } = t;
   const keys: React.ReactNode[] = [];
   for (let row = 0; row < 4; row++) {
@@ -487,7 +492,7 @@ const LaptopSide: React.FC<{ t: Typing }> = ({ t }) => {
           stroke={COLORS.ink}
           strokeWidth={OUTLINE}
         />
-        <Browser typed={t.typed} caret={t.caret} flash={t.flash} loading={t.loading} />
+        <Browser typed={t.typed} caret={t.caret} flash={t.flash} loading={t.loading} page={page} />
         <rect x={0} y={0} width={SCREEN_W} height={SCREEN_H} rx={6} fill="none" stroke={COLORS.ink} strokeWidth={3} />
       </g>
     </g>
@@ -514,7 +519,14 @@ const DeskSide: React.FC = () => (
   </g>
 );
 
-export const SideView: React.FC<{ t: Typing }> = ({ t }) => {
+// `page` (optional) replaces the browser's empty page; it's drawn in the
+// screen's own 360×240 space, below the 46-unit toolbar. `nod` tilts the
+// person's head (degrees). Both are used by S10.
+export const SideView: React.FC<{ t: Typing; page?: React.ReactNode; nod?: number }> = ({
+  t,
+  page,
+  nod = 0,
+}) => {
   // Hands: the near hand hovers just behind Enter (so the key stays visible),
   // taps on its letters, winds up and slams down on Enter.
   // The far hand rests further along the keyboard and taps the other letters.
@@ -533,8 +545,8 @@ export const SideView: React.FC<{ t: Typing }> = ({ t }) => {
       <ScreenGlow cx={screenCenter[0]} cy={screenCenter[1]} strength={1.2} />
       <DeskSide />
       <Lamp x={1760} />
-      <LaptopSide t={t} />
-      <Person x={SIDE_PERSON[0]} y={SIDE_PERSON[1]} view="side" nearHand={nearHand} farHand={farHand} />
+      <LaptopSide t={t} page={page} />
+      <Person x={SIDE_PERSON[0]} y={SIDE_PERSON[1]} view="side" nearHand={nearHand} farHand={farHand} nod={nod} />
       <ClickBurst x={ENTER_POS[0]} y={ENTER_POS[1] - 6} t={t.flash} />
     </g>
   );

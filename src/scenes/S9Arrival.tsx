@@ -5,14 +5,13 @@ import { Bubble } from "../components/Bubble";
 import { Camera, Shot, easedMove, springMove } from "../components/Camera";
 import { Envelope, IP_LABEL } from "../components/Envelope";
 import { LINKS, NetworkMap, NodeId, ROUTE, nodeAnchor, routeLinks } from "../components/NetworkMap";
-import { Shape, rr } from "../components/Shape";
-import { COLORS, FONT, OUTLINE } from "../theme";
+import { COLORS, FONT } from "../theme";
 
 // Scene 9 — Arrival and return. See SCRIPT.md → "Scene 9".
 // Wide map → envelope reaches the last router ("That's mine! →") → it hands
 // the envelope to the moodle.com server → a green reply envelope travels back
 // hop by hop (on a slightly different path) → pull back: both paths glow →
-// the takeaway sentence.
+// dissolve to cream. (The takeaway sentence now ends Scene 10.)
 //
 // Narration public/audio/s9.wav is 10.52s. Measured pauses (silencedetect):
 //   0.00–3.26s  "Only the last router knows exactly where it goes."   (f 0–98)
@@ -20,8 +19,10 @@ import { COLORS, FONT, OUTLINE } from "../theme";
 //   6.44–7.01s  "no map,"                                             (f 193–210)
 //   7.27–8.26s  "no master plan,"                                     (f 218–248)
 //   8.49–10.4s  "just one step closer at a time."                     (f 255–315)
-// The takeaway card then holds ~6 s so it can be read: 500 frames total.
-export const S9_DURATION = 500;
+// Short hold on the glowing map after the last word, then a dissolve to the
+// cream canvas S10 opens on: 345 frames total.
+export const S9_DURATION = 345;
+const DISSOLVE_START = 327;
 
 type P = { x: number; y: number };
 
@@ -58,16 +59,6 @@ const HOP_GAP = 4;
 const hopStart = (i: number) => HOP0 + i * (HOP_LEN + HOP_GAP);
 const REPLY_HOME = hopStart(REPLY_PATH.length - 2) + HOP_LEN; // ≈ 256
 
-// Final card ("just one step closer at a time" starts f 255).
-const CARD_IN = 262;
-const LINES = [
-  "No machine on the internet knows the whole path.",
-  "Each router only knows which way gets",
-  "your request one step closer —",
-  "and only the last one knows exactly where it goes.",
-];
-const LINE_STAGGER = 14;
-
 // ---------- Camera ----------
 
 const WIDE: Shot = { x: 990, y: 560, zoom: 1.0, rotate: 0 };
@@ -75,15 +66,12 @@ const CLOSE: Shot = { x: 1665, y: 420, zoom: 1.6, rotate: -0.6 };
 const HANDOFF: Shot = { x: 1700, y: 450, zoom: 1.75, rotate: 0.4 };
 const MID: Shot = { x: 1250, y: 560, zoom: 1.3, rotate: 0 };
 const BACK: Shot = { x: 960, y: 565, zoom: 1.0, rotate: 0 };
-// Map shrinks into the top part of the frame; the takeaway card sits below.
-const FINAL: Shot = { x: 990, y: 860, zoom: 0.62, rotate: 0 };
 
 const shotAt = (f: number, fps: number): Shot => {
   const a = springMove({ frame: f, fps, from: WIDE, to: CLOSE, start: 4, durationInFrames: 50 });
   const b = easedMove({ frame: f, from: a, to: HANDOFF, start: 62, end: 112 });
   const c = easedMove({ frame: f, from: b, to: MID, start: 128, end: 190 });
-  const d = easedMove({ frame: f, from: c, to: BACK, start: 186, end: 250 });
-  return easedMove({ frame: f, from: d, to: FINAL, start: 252, end: 300 });
+  return easedMove({ frame: f, from: c, to: BACK, start: 186, end: 250 });
 };
 
 // ---------- Small pieces ----------
@@ -149,50 +137,6 @@ const Legend: React.FC<{ show: number }> = ({ show }) => {
           </text>
         </g>
       ))}
-    </g>
-  );
-};
-
-const TakeawayCard: React.FC<{ frame: number; fps: number }> = ({ frame, fps }) => {
-  const pop = spring({ frame: frame - CARD_IN, fps, config: { damping: 14 } });
-  if (pop <= 0.001) return null;
-  const W = 1640;
-  const H = 360;
-  const cx = 960;
-  const cy = 800;
-  const fontSize = 56;
-  const lineH = 74;
-  return (
-    <g transform={`translate(${cx} ${cy}) scale(${0.85 + 0.15 * pop})`} opacity={Math.min(1, pop * 1.4)}>
-      <g transform={`translate(10 12)`}>
-        <path d={rr(-W / 2, -H / 2, W, H, 48)} fill={COLORS.ink} opacity={0.18} />
-      </g>
-      <Shape
-        d={rr(-W / 2, -H / 2, W, H, 48)}
-        fill={COLORS.white}
-        strokeWidth={OUTLINE + 1}
-        shade={<rect x={-W / 2} y={H / 2 - 26} width={W} height={26} fill={COLORS.backgroundShade} />}
-      />
-      {LINES.map((line, i) => {
-        const t = ease(frame, CARD_IN + 6 + i * LINE_STAGGER, CARD_IN + 18 + i * LINE_STAGGER, Easing.out(Easing.cubic));
-        const y = -((LINES.length - 1) * lineH) / 2 + i * lineH - 8;
-        return (
-          <text
-            key={i}
-            x={0}
-            y={y + (1 - t) * 18}
-            opacity={t}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontFamily={FONT}
-            fontWeight={i === 0 ? 600 : 500}
-            fontSize={fontSize}
-            fill={i === 0 ? COLORS.packetShade : COLORS.ink}
-          >
-            {line}
-          </text>
-        );
-      })}
     </g>
   );
 };
@@ -340,11 +284,18 @@ export const S9Arrival: React.FC = () => {
         <Bubble x={dst1.x + 4} y={dst1.y - 100} text="That's mine! →" fontSize={34} pop={bubblePop} tail="left" />
       </Camera>
 
-      {/* Screen-space overlay: legend + takeaway, on its own gently drifting layer. */}
+      {/* Screen-space overlay: legend, on its own gently drifting layer. */}
       <Camera drift={0.5}>
         <Legend show={legend} />
-        <TakeawayCard frame={frame} fps={fps} />
       </Camera>
+
+      {/* Dissolve to the cream canvas S10 opens on (no hard cut). */}
+      <AbsoluteFill
+        style={{
+          backgroundColor: COLORS.background,
+          opacity: ease(frame, DISSOLVE_START, S9_DURATION - 1, Easing.inOut(Easing.sin)),
+        }}
+      />
 
       <Audio src={staticFile("audio/s9.wav")} />
     </AbsoluteFill>

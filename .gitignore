@@ -11,3 +11,5 @@ out/
 dist/
 .env
 .claude/worktrees/
+.claude/INTEGRATOR
+.claude/settings.local.json

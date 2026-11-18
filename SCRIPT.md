@@ -54,6 +54,7 @@ src/
     S7HomeRouter.tsx
     S8Hops.tsx
     S9Arrival.tsx
+    S10Finale.tsx
   Main.tsx                 # the full video: <Series> of all scenes, in order
   Root.tsx                 # registers Main + every scene as its own composition
 public/audio/              # one WAV per narration line: s1.wav, s3.wav, s4.wav ...
@@ -176,10 +177,24 @@ The envelope shoots out through a cable in the wall.
 
 ### Scene 9 — Arrival and return (0:55–1:03) · `S9Arrival.tsx`
 
-**Visual:** The last router's bubble: **"That's mine! →"** and it hands the envelope to the server (a cartoon server rack with the Moodle-style label "moodle.com" in plain text — no logo). The server sends back a reply envelope in a different color. Pull back: both paths glow on the map. Final text on screen: the takeaway sentence.
+**Visual:** The last router's bubble: **"That's mine! →"** and it hands the envelope to the server (a cartoon server rack with the Moodle-style label "moodle.com" in plain text — no logo). The server sends back a reply envelope in a different color. Pull back: both paths glow on the map. (The on-screen takeaway sentence now comes at the end of Scene 10.)
 
 **Narration:**
 > Only the last router knows exactly where it goes. Then the page travels back the same way — no map, no master plan, just one step closer at a time.
+
+---
+
+### Scene 10 — The page opens · `S10Finale.tsx`
+
+**Visual + camera:**
+1. The reply envelope (same color as the reply in Scene 9) flies toward the laptop and into its screen.
+2. The camera pulls OUT of the laptop screen back to the 3/4 side view of the person at the desk — the exact reverse of Scene 2's dive. Reuse Person and the S1 room drawing so it's clearly the same room and person.
+3. In the browser (address bar still shows moodle.com): a short loading spinner, then a generic course dashboard appears: a header bar, a "My courses" title, and four course cards: "Intro to Cyber", "Natural Language Processing", "Intro to Machine Learning", "Programming with AI Agents". No Moodle logo or brand styling — a plain cartoon dashboard in our palette.
+4. The person gives a small satisfied nod.
+5. The takeaway sentence fades in on screen at the end and holds for ~2 seconds.
+
+**Narration:**
+> Finally, the server's answer makes its way back to our computer — and that's how the page we asked for opens.
 
 ---
 
@@ -189,7 +204,7 @@ The envelope shoots out through a cable in the wall.
 |---|---|---|
 | Narrator | `am_michael` | calm, speed 1.0 |
 
-Generate one WAV per scene line (`public/audio/s1.wav`, `s3.wav`, `s4.wav`, `s5.wav`, `s6.wav`, `s7.wav`, `s8.wav`, `s9.wav`) with `tts.py`, and place each with `<Audio>` inside its own scene. If a WAV is longer than its scene, lengthen the scene (update its exported duration) rather than speeding up the voice.
+Generate one WAV per scene line (`public/audio/s1.wav`, `s3.wav`, `s4.wav`, `s5.wav`, `s6.wav`, `s7.wav`, `s8.wav`, `s9.wav`, `s10.wav`) with `tts.py`, and place each with `<Audio>` inside its own scene. If a WAV is longer than its scene, lengthen the scene (update its exported duration) rather than speeding up the voice.
 
 ---
 
@@ -204,6 +219,7 @@ Every narrated claim must stay inside this list:
 - [x] The request may cross several networks (the provider's, then others) before reaching the destination's network.
 - [x] Only the router connected to the destination's network delivers it directly to the server.
 - [x] The reply travels back the same way (hop by hop), not necessarily on the same path.
+- [x] The server's reply travels back to the computer, and the browser displays the page.
 
 Wording rule: routers **forward** (pass on) the packet — they don't "refer" the user to someone else. Intermediate machines are **routers**, not servers; the **server** is only the destination.
 

@@ -19,6 +19,8 @@ type PersonProps = {
   // (origin = floor under the chair, unscaled). The arms bend to reach them.
   nearHand?: Point;
   farHand?: Point;
+  // Side view only: head tilt in degrees around the neck (+ = nod down/forward).
+  nod?: number;
 };
 
 // Slow breathing: shoulders/head rise a couple of units.
@@ -225,10 +227,11 @@ const ChairSide: React.FC = () => (
   </g>
 );
 
-const SideView: React.FC<{ breath: number; nearHand: Point; farHand: Point }> = ({
+const SideView: React.FC<{ breath: number; nearHand: Point; farHand: Point; nod: number }> = ({
   breath,
   nearHand,
   farHand,
+  nod,
 }) => {
   const b = -breath;
   const shoulder: Point = [10, -430 + b];
@@ -265,7 +268,8 @@ const SideView: React.FC<{ breath: number; nearHand: Point; farHand: Point }> = 
         />
       </g>
 
-      {/* Neck. */}
+      {/* Neck + head, tilted together around the base of the neck (nod). */}
+      <g transform={`rotate(${nod} 39 ${-452 + b})`}>
       <Shape
         d={rr(18, -508 + b, 42, 60, 12)}
         fill={COLORS.skin}
@@ -308,6 +312,7 @@ const SideView: React.FC<{ breath: number; nearHand: Point; farHand: Point }> = 
       {/* Eye + cheek. */}
       <circle cx={head[0] + 52} cy={head[1] + 4} r={8} fill={COLORS.ink} />
       <circle cx={head[0] + 46} cy={head[1] + 34} r={13} fill={COLORS.packet} opacity={0.35} />
+      </g>
 
       {/* Near arm (in front of the body). */}
       <Arm shoulder={shoulder} hand={nearHand} />
@@ -322,6 +327,7 @@ export const Person: React.FC<PersonProps> = ({
   view = "back",
   nearHand = [250, -390],
   farHand = [280, -400],
+  nod = 0,
 }) => {
   const breath = useBreath();
   return (
@@ -329,7 +335,7 @@ export const Person: React.FC<PersonProps> = ({
       {view === "back" ? (
         <BackView breath={breath} />
       ) : (
-        <SideView breath={breath} nearHand={nearHand} farHand={farHand} />
+        <SideView breath={breath} nearHand={nearHand} farHand={farHand} nod={nod} />
       )}
     </g>
   );
