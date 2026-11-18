@@ -110,17 +110,28 @@ Timings are targets, not rules. Total ≈ 60 seconds. A partial video is fine.
 
 ---
 
-### Scene 4 — The note (0:18–0:28) · `S4Note.tsx` — **short analogy, ~10 seconds**
+### Scene 4 — The note · `S4Note.tsx` (~30 seconds)
 
-**Visual:** A lecture hall, simple and quick. Rows numbered on the aisle side.
+**Beat 4a — Preparing the note (camera stays zoomed in on one student the whole time):**
+1. The student looks around the hall, spots their friend far ahead, and checks where they sit: a small thought bubble shows "Row 3, Seat 5".
+2. Writes a note, folds it, and puts it into an envelope — use the shared Envelope component, so it looks like the request envelope later in the video.
+3. Writes "Row 3, Seat 5" on the envelope label.
+4. Taps the person in front and hands it over.
 
-**Action (fast):**
-1. Close on a student in the back row. She folds a small note and taps the student in front: bubble **"Row 3, seat 5!"** (0:18–0:21)
-2. The note jumps forward hand to hand in quick arcs, a tiny **"→"** bubble over each hand. Camera follows the note. (0:21–0:26)
-3. In row 3 it goes sideways and lands in seat 5's hands. (0:26–0:28)
+**Narration (s4a):**
+> To see how this works, imagine you're sitting in a lecture hall and want to pass a note to a friend sitting somewhere in the room. First, you check where they're sitting: row 3, seat 5. Then you write the note, put it in an envelope, write "Row 3, Seat 5" on it — and ask the person in front of you to pass it on.
 
-**Narration:**
-> Think of passing a note in a lecture hall. Nobody knows who's in row 3, seat 5 — each person just passes it one row closer.
+**Beat 4b — Passing it on (4 people):**
+The envelope passes through exactly 4 people, row by row. Each pass is a slow, clear arc; the camera follows the envelope smoothly with gentle moves, not fast jumps. Over each person, a small bubble: "Not mine — forward →".
+
+**Narration (s4b):**
+> Each person passes it on to the next. None of them knows exactly how to reach your friend — they only know that row 3 is somewhere ahead.
+
+**Beat 4c — The one who knows, and arrival:**
+The envelope reaches a person sitting in row 3. Bubble: "Row 3? Seat 5 is right next to me!" They hand it sideways to the friend in seat 5, who opens it and smiles.
+
+**Narration (s4c):**
+> Until it reaches someone in row 3. They do know exactly where it goes — and hand it straight to your friend.
 
 ---
 
